@@ -40,9 +40,11 @@ def matmul_cpu(A, B, C):
 
 @cuda.jit
 def matmul_shared_mem(A, B, C):
+    # 在shared memory中定義vector大小和類型
+    # Vector可被整個block的所有thread share
     sA = cuda.shared.array(shape=(TPB,TPB),dtype=float32)
     sB = cuda.shared.array(shape=(TPB,TPB),dtype=float32)
-    x, y = cuda.grid(2) # Index in the whole grid
+    x, y = cuda.grid(2) # Index in the whole grid x = row, y = col
 
     tx = cuda.threadIdx.x # Index in the block
     ty = cuda.threadIdx.y
@@ -53,9 +55,11 @@ def matmul_shared_mem(A, B, C):
     for i in range(int(A.shape[1]/TPB)):
         sA[tx,ty] = A[x, ty+i*TPB] # +i*TPB = stride    A[x,ty+i*TPB] = A[0,ty+i*TPB] ... A[5,ty+i*TPB]
         sB[tx,ty] = B[tx+i*TPB, y] #B[tx+i*TPB, y] = B[tx+i*TPB, 0]...B[tx+i*TPB, 5]
-        cuda.syncthreads()  # synchronize all threads
+        cuda.syncthreads()  # synchronize all threads, 線程同步等待block所有thread loading結束, 所有thread執行完先行下一步
+        # 已將 A和B的submatrix copy到sA和sB
+
         for j in range(TPB):
-            tmp += sA[tx,j]*sB[j,ty]
+            tmp += sA[tx,j]*sB[j,ty]  #從shared memory讀取data較global memory快
         cuda.syncthreads()
     C[x,y] = tmp
 
@@ -103,6 +107,9 @@ time_gpu = (end_gpu_shared - start_gpu_shared)
 print("GPU time(shared memory): "+ str(time_gpu))
 C_shared_gpu = C_shared_mem.copy_to_host()
 
-print("C_CPU:{}".format(C_cpu[:10]))
-print("GPU(global memory):{}".format(C_global_gpu[:10]))
-print("GPU(shared memory):{}".format(C_shared_gpu[:10]))
+# print("C_CPU:{}".format(C_cpu[:10]))
+# print("GPU(global memory):{}".format(C_global_gpu[:10]))
+# print("GPU(shared memory):{}".format(C_shared_gpu[:10]))
+
+if (numpy.array_equal(C_cpu, C_global_gpu)) and (numpy.array_equal(C_cpu, C_shared_gpu)):
+    print("The results of cpu and gpu are equal!")
