@@ -8,6 +8,7 @@ def gpu_print(N):
     for i in range(idxwithinGrid, N, gridStride):
         print(i)
 
+
 """
 跨步大小為網格中線程總數，用來計算。 迴圈的步長是網格中線程總數，這也是為什麼將這種方式稱為網格跨步。 
 如果網格總線程數為1024，那麼0號線程將計算第0、1024、2048... 號的數據。 

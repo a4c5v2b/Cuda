@@ -19,7 +19,7 @@ def tan_sum_cpu(x,c):
         c[i] = tan_sum
 
 
-@numba.jit("(float64[:,:],float64[:])",nopython=True)  # Complexity = n*n
+@numba.jit("(float64[:,:],float64[:])")  # Complexity = n*n
 def tan_sum(x,c):
 
     tan_sum = 0
